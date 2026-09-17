@@ -6,7 +6,9 @@ Run:     python halma_pygame.py
 """
 from typing import List, Optional, Tuple, Callable
 import pygame
-import treelib
+import treelib as tr
+import traceback
+from copy import deepcopy
 
 from halma import (
     check_legal_move,
@@ -39,9 +41,84 @@ BotFunction = Callable[
     Tuple[str, str]
 ]
 
-# You can set your bot function here, the default one is random_bot, which as the name suggests makes random moves
-BOT_FUNCTION: BotFunction = illegal_bot
+# function used to catch errors from tree_bot, so you can actually see the stack trace
+# Because suprise, turns out knowning where error was is quite helpful for fixing it
+def tree_bot1(board: List[List[int]], player: int, visualize_tree: bool) -> Tuple[str, str]:
+    try:
+        return tree_bot(board, player, visualize_tree)
+    except ValueError as error:
+        print(f"Error in treebot: {error}")
+        print(error.with_traceback)
+        raise
+    except Exception as error:
+        print(f"Unexpected error in treebot: {error}")
+        print(traceback.format_exc())
+        raise
 
+# main function, gets the current state of the board, its player number and returns position of move (ex. "A1", "B2") for A1 to B2
+# this whole function is a nigthmare, don't touch it ill fix it.
+def tree_bot(board: List[List[int]], player: int, visualize_tree: bool) -> Touple[str, str]:
+    boardTree = tr.Tree()
+    moveList = []
+    boardTree.create_node("Original board",-1,data=board)
+    currentLegalMoves: List[Tuple[Tuple[int, int], Tuple[int, int]]] = []
+    currentParsableList: List = [board]
+    foundWinningMove: bool = False
+    boardId = 0
+
+    win_cells = win_cells_1v1
+    for board in currentParsableList: 
+        orgBoardId = boardId-1
+        print(f"Current board: {orgBoardId}")
+        if foundWinningMove: break
+        for row in range(5):
+            for column in range(5):
+                if board[row][column] != player:
+                    continue
+
+                oldPos: Tuple[int, int] = (row, column)
+                
+                for new_row in range(5):
+                    for new_column in range(5):
+                        newPos: Tuple[int, int] = (new_row, new_column)
+
+                        if check_legal_move(board, oldPos, newPos):
+                            currentLegalMoves.append((oldPos, newPos))
+        if not currentLegalMoves:
+            raise ValueError(f"Player {player} has no legal moves")
+        print(f"Current legal moves: {len(currentLegalMoves)}")
+        for moveData in currentLegalMoves:
+            board_after_move = deepcopy(board)
+            board_after_move[moveData[1][0]][moveData[1][1]] = player
+            board_after_move[moveData[0][0]][moveData[0][1]] = 0
+            for node in boardTree.all_nodes():
+                if node.data == board:
+                    continue
+            if all(board_after_move[row][column] == player
+                    for row, column in win_cells[player]):
+                print("Found winning move")
+                boardTree.create_node("winning board",boardId,data=board_after_move,parent=orgBoardId)
+                boardId += 1
+                moveList.append(move)
+                foundWinningMove = True
+                break
+            else:
+                boardTree.create_node("board",boardId,data=board_after_move,parent=orgBoardId)
+                moveList.append(move)
+                boardId += 1
+            currentParsableList.append(board_after_move)
+    print("CHeckpoint 535")
+    winningBoardNode = boardTree.get_node(None).tag = "winning move"
+    if winningBoardNode is not None:
+        pickedMove = moveList[currentParsableList.index(winningBoardNode.data)]
+        old_reference: str = chr(ord("A") + pickedMove[0][1]) + str(pickedMove[0][0] + 1)
+        new_reference: str = chr(ord("A") + pickedMove[1][1]) + str(pickedMove[1][0] + 1)
+        return old_reference, new_reference
+    else:
+        raise ValueError(f"Player {player} has no winning moves")
+
+# You can set your bot function here, the default one is random_bot, which as the name suggests makes random moves
+BOT_FUNCTION: BotFunction = tree_bot1
 
 class HalmaGame:
     def __init__(self, play_against_bot: bool = PLAY_AGAINST_BOT) -> None:
@@ -71,9 +148,12 @@ class HalmaGame:
     def attempt_move(
         self, old_position: Tuple[int, int], new_position: Tuple[int, int]
     ) -> bool:
+        print(f"Attempting move from {old_position} to {new_position}")
         if self.result.status != "ongoing" or self.bot_error:
+            print(f"Bot error: {self.bot_error}, result status: {self.result.status}")
             return False
         if not move(self.board, old_position, new_position, self.current_player):
+            print(f"board: {self.board}, old_position: {old_position}, new_position: {new_position}, current_player: {self.current_player}")
             self.message = "Illegal move. Choose a highlighted square."
             return False
 
@@ -87,7 +167,7 @@ class HalmaGame:
         self.message = "Select your piece, then a highlighted square."
         self.bot_due = pygame.time.get_ticks() + BOT_DELAY_MS
         return True
-
+    
     def handle_click(self, mouse_position: Tuple[int, int]) -> None:
         if self.result.status != "ongoing" or self.bot_error:
             return
