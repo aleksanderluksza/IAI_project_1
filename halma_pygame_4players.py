@@ -62,19 +62,33 @@ def AI_Player_Team27(board: List[List[int]], player: int, visualize: bool, depth
     move_tree.show(line_type="ascii-emv")
     
     # after tree is generated and printed, evauluate all paths.
-    
+    leaves = move_tree.leaves()
+    for leaf in leaves:
+        board = leaf.data["board"]
+        happiness = leaf.data["happiness"]
+        for player in range(1,5):
+            for row in range(5):
+                for column in range(5):
+                    if board[row][column] != player: continue
+                    if (row,column) in win_cells_all[player]: points_a += 25 # 25 points for being in the end zone
+                    else:
+                        for x in range(3):
+                            points_b += 25 - (abs(row - win_cells_all[player][x][0]) + abs(column - win_cells_all[player][x][1]))
+                    if points_a == 75: points_a += 25 # 25 points for being a winning board
+                    happiness[player-1] = points_a + points_b
+    # all leaves have been evaluated for each player, now we propagate it up the tree 
 
+    ## TODO: propagate happiness values up the tree to the root.
 
 
 # recursivly generate a tree of possible moves for current and next players.
-# WRONG, IT CANNOT BE DEPTH FIRST! .... or can it?
 def generate_tree(board: List[List[int]], player: int, board_map, depth: int,move_tree:tr.Tree,parent = "root") -> None:
     if "root" not in move_tree: #first iteration (first call)
         move_tree.create_node(
             "root", "root", data={"board" : board,"board_str": board_to_string(board)}
         )
         board_map["root"] = board
-    if depth == 0: #depth reached, going up
+    if depth == 0: #required depth reached, going up
         return None
 
     possible_moves = generate_possible_moves(board, player)
@@ -92,13 +106,14 @@ def generate_tree(board: List[List[int]], player: int, board_map, depth: int,mov
 
         data = {
             "board": board_copy,
-            "board_str": board_to_string(board_copy), # str version of the board
-            "happiness": [0,0,0,0] # how much each player likes this board
+            "board_str": board_to_string(board_copy), # str version of the board (for printing)
+            "happiness": [0,0,0,0] # how much each player likes this board (slot 0 - player 1, slot 1 - player 2, etc)
         }
         move_tree.create_node(move_id, move_id, parent,data)
         board_map[move_id] = board_copy
         generate_tree(board_copy, player%4+1, board_map, depth-1, move_tree, move_id)
 
+# serializes the board into an easy printable string.
 def board_to_string(board: List[List[int]]) -> str:
     returnable:str = ""
     for row in board:
@@ -107,7 +122,7 @@ def board_to_string(board: List[List[int]]) -> str:
         returnable += "\n"
     return returnable
 
-
+# generates all possible moves for given player and board.
 def generate_possible_moves(board: List[List[int]],player) -> List[Tuple[int,int]]:
     possible_moves = []
     for row in range(5):
