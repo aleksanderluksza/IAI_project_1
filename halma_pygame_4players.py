@@ -13,6 +13,9 @@ Run:     python halma_pygame_4players.py
 """
 from typing import Dict, List, Optional, Tuple, Callable
 import pygame
+import treelib as tr
+from copy import deepcopy
+import traceback
 
 from halma import (
     check_legal_move,
@@ -52,6 +55,74 @@ BotFunction = Callable[
     Tuple[str, str]
 ]
 
+def AI_Player_Team27(board: List[List[int]], player: int, visualize: bool, depth:int = 2) -> Tuple[str, str]:
+    board_map = {}
+    move_tree = tr.Tree()
+    generate_tree(board, player, board_map, depth*4+1, move_tree)
+    move_tree.show(line_type="ascii-emv")
+    
+    # after tree is generated and printed, evauluate all paths.
+    
+
+
+
+# recursivly generate a tree of possible moves for current and next players.
+# WRONG, IT CANNOT BE DEPTH FIRST! .... or can it?
+def generate_tree(board: List[List[int]], player: int, board_map, depth: int,move_tree:tr.Tree,parent = "root") -> None:
+    if "root" not in move_tree: #first iteration (first call)
+        move_tree.create_node(
+            "root", "root", data={"board" : board,"board_str": board_to_string(board)}
+        )
+        board_map["root"] = board
+    if depth == 0: #depth reached, going up
+        return None
+
+    possible_moves = generate_possible_moves(board, player)
+
+    for old_pos,new_pos in possible_moves: 
+        board_copy = deepcopy(board)
+        move(board_copy, old_pos, new_pos, player)
+        move_id = f"{player}:{old_pos}->{new_pos}"
+        if (move_id in move_tree) or (board_copy in board_map.values()):
+            if move_tree.depth(move_id) > depth:
+                print(f"Move {move_id} already exists in tree and has been moved from depth {move_tree.depth(move_id)} to {depth}")
+                print(board_to_string(board_copy))
+                move_tree.move_node(move_id, parent)
+            continue
+
+        data = {
+            "board": board_copy,
+            "board_str": board_to_string(board_copy), # str version of the board
+            "happiness": [0,0,0,0] # how much each player likes this board
+        }
+        move_tree.create_node(move_id, move_id, parent,data)
+        board_map[move_id] = board_copy
+        generate_tree(board_copy, player%4+1, board_map, depth-1, move_tree, move_id)
+
+def board_to_string(board: List[List[int]]) -> str:
+    returnable:str = ""
+    for row in board:
+        for cell in row:
+            returnable += str(cell).replace("0",".")
+        returnable += "\n"
+    return returnable
+
+
+def generate_possible_moves(board: List[List[int]],player) -> List[Tuple[int,int]]:
+    possible_moves = []
+    for row in range(5):
+        for column in range(5):
+            if board[row][column] != player : continue
+            old_pos = (row,column)
+
+            for newRow in range(-2,2):
+                for newColumn in range(-2,2):
+                    new_pos = (row+newRow,column+newColumn)
+                    if new_pos[0] < 0 or new_pos[0] > 4 or new_pos[1] < 0 or new_pos[1] > 4: continue
+                    if not check_legal_move(board,old_pos,new_pos): continue
+                    possible_moves.append((old_pos,new_pos))
+    return possible_moves
+
 '''
 Import your team's function above, then replace random_bot for that player.
 Example: from AI_Player_Team1 import AI_Player_Team1
@@ -60,7 +131,7 @@ Example: from AI_Player_Team1 import AI_Player_Team1
 Alternatively you can set a desired player's bot function to None and play them yourself
 '''
 BOT_FUNCTIONS: Dict[int, Optional[BotFunction]] = {
-    1: random_bot,
+    1: AI_Player_Team27,
     2: random_bot,
     3: random_bot,
     4: random_bot,
@@ -176,6 +247,7 @@ class HalmaGame:
         except Exception as error:
             # Student bot errors forfeit this turn, rather than stopping the game.
             print(f"Player {self.current_player} bot error: {type(error).__name__}: {error}")
+            print(traceback.format_exc())
             self.skip_turn("bot error (see console)")
             return
 
