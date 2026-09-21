@@ -80,6 +80,13 @@ def AI_Player_Team27(board: List[List[int]], player: int, visualize: bool, depth
 
     ## TODO: propagate happiness values up the tree to the root.
 
+    # 1. AI should select moves that maximize its changes of winning.
+    # 2. AI should account for other players happiness (no player will choose a move that gives them no chances of winning)
+    # 3. If winning is impossible, AI should prioritize moves that maximize its chances of tying.
+    # 4. If multiple paths to victory are possible, prioritize the path that is the shortest and gives it the biggest chance of winning 
+    #       account for other players happiness.
+    # 5. If None apply, AI should be as annoying to other players as possible.
+
 
 # recursivly generate a tree of possible moves for current and next players.
 def generate_tree(board: List[List[int]], player: int, board_map, depth: int,move_tree:tr.Tree,parent = "root") -> None:
