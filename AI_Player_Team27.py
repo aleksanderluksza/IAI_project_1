@@ -270,8 +270,8 @@ def generate_possible_moves(board: List[List[int]],player) -> List[Tuple[int,int
             if board[row][column] != player : continue
             old_pos = (row,column)
 
-            for newRow in range(-2,2):
-                for newColumn in range(-2,2):
+            for newRow in range(-3,3):
+                for newColumn in range(-3,3):
                     new_pos = (row+newRow,column+newColumn)
                     if new_pos[0] < 0 or new_pos[0] > 4 or new_pos[1] < 0 or new_pos[1] > 4: continue
                     if not check_legal_move(board,old_pos,new_pos): continue

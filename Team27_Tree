@@ -1,22 +1,36 @@
 digraph tree {
 	"root" [label="root", shape=circle]
-	"2:A3->A4" [label="2:A3->A4", shape=circle]
-	"2:A3->B3" [label="2:A3->B3", shape=circle]
-	"2:A5->A4" [label="2:A5->A4", shape=circle]
-	"2:B5->B4" [label="2:B5->B4", shape=circle]
+	"1:D4->C4" [label="1:D4->C4", shape=circle]
+	"1:D4->D3" [label="1:D4->D3", shape=circle]
+	"1:D4->D5" [label="1:D4->D5", shape=circle]
+	"1:E4->C4" [label="1:E4->C4", shape=circle]
+	"1:E4->E3" [label="1:E4->E3", shape=circle]
+	"1:E5->D5" [label="1:E5->D5", shape=circle]
+	"1:E5->E3" [label="1:E5->E3", shape=circle]
+	"2:B4->D4" [label="2:B4->D4", shape=circle]
+	"2:A4->A3" [label="2:A4->A3", shape=circle]
+	"2:A4->A5" [label="2:A4->A5", shape=circle]
+	"2:A4->C4" [label="2:A4->C4", shape=circle]
+	"2:B4->B3" [label="2:B4->B3", shape=circle]
+	"2:B4->C4" [label="2:B4->C4", shape=circle]
+	"2:B5->A5" [label="2:B5->A5", shape=circle]
+	"2:B5->B3" [label="2:B5->B3", shape=circle]
 	"2:B5->C5" [label="2:B5->C5", shape=circle]
-	"3:B2->B3" [label="3:B2->B3", shape=circle]
-	"3:B2->C2" [label="3:B2->C2", shape=circle]
-	"3:D1->D2" [label="3:D1->D2", shape=circle]
-	"3:D1->E1" [label="3:D1->E1", shape=circle]
 
-	"root" -> "2:A3->B3"
-	"root" -> "2:A3->A4"
-	"root" -> "2:A5->A4"
-	"root" -> "2:B5->B4"
-	"root" -> "2:B5->C5"
-	"2:A3->A4" -> "3:B2->B3"
-	"2:A3->B3" -> "3:D1->E1"
-	"2:A3->B3" -> "3:D1->D2"
-	"2:A3->B3" -> "3:B2->C2"
+	"root" -> "1:D4->D3"
+	"root" -> "1:D4->C4"
+	"root" -> "1:D4->D5"
+	"root" -> "1:E4->E3"
+	"root" -> "1:E4->C4"
+	"root" -> "1:E5->E3"
+	"root" -> "1:E5->D5"
+	"1:D4->C4" -> "2:B4->D4"
+	"1:D4->D3" -> "2:A4->A3"
+	"1:D4->D3" -> "2:A4->C4"
+	"1:D4->D3" -> "2:A4->A5"
+	"1:D4->D3" -> "2:B4->B3"
+	"1:D4->D3" -> "2:B4->C4"
+	"1:D4->D3" -> "2:B5->B3"
+	"1:D4->D3" -> "2:B5->A5"
+	"1:D4->D3" -> "2:B5->C5"
 }
