@@ -55,6 +55,12 @@ BotFunction = Callable[
     Tuple[str, str]
 ]
 
+class bot_data:
+    board: List[List[int]]
+    player: int
+    happiness: List[int]
+    board_string: str
+
 def AI_Player_Team27(board: List[List[int]], player: int, visualize: bool = False, depth:int = 2) -> Tuple[str, str]:
     if len(board) != 5 or len(board[0]) != 5:
         raise ValueError("Board must be 5 by 5")
@@ -65,46 +71,57 @@ def AI_Player_Team27(board: List[List[int]], player: int, visualize: bool = Fals
     board_map = {}
     move_tree = tr.Tree()
     generate_tree(board, player, board_map, depth*4+1, move_tree)
-    move_tree.show(line_type="ascii-emv")
     
     # after tree is generated and printed, evauluate all paths.
     leaves = move_tree.leaves()
     for leaf in leaves:
-        board = leaf.data["board"]
-        happiness = leaf.data["happiness"]
+        board = leaf.data.board
+        happiness = leaf.data.happiness
         for player in range(1,5):
             points_a = 0
             points_b = 0
             for row in range(5):
                 for column in range(5):
                     if board[row][column] != player: continue
-                    if (row,column) in win_cells_all[player]: points_a += 25 # 25 points for being in the end zone
+                    if (row,column) in win_cells_all[player]: points_a += 250 # 25 points for being in the end zone
                     else:
                         for x in range(3):
-                            points_b += 25 - (abs(row - win_cells_all[player][x][0]) + abs(column - win_cells_all[player][x][1]))
-                    if points_a == 75: points_a += 25 # 25 points for being a winning board
+                            if row == get_player_start_cells(player)[x][0] and column == get_player_start_cells(player)[x][1]: 
+                                points_b -= 500
+                                #print(f"Player {player} has a piece in the starting zone at {row},{column}, subtracting 100 points")
+                            else:
+                                points_b += 100 - 5*(abs(row - win_cells_all[player][x][0]) + abs(column - win_cells_all[player][x][1]))
+                            
+                    #print(f"Player {player} has {points_a} points for being in the end zone and {points_b} points for being closer to the end zone than the start zone")
                     happiness[player-1] = points_a + points_b
-    # all leaves have been evaluated for each player, now we propagate it up the tree 
+                    temp = leaf.data
+                    temp.happiness = happiness
+                    leaf.data = temp
+    # all leaves have been evaluated for each player, now we need to propagate it up the tree 
     ancestors = get_ancestors(leaves, move_tree)
     while ancestors != []:
         for ancestor in ancestors:
             if ancestor.identifier == "root": continue
             children = move_tree.children(ancestor.identifier)
-            for player in range(1,5):
-                pass
-                # calculate the happiness of the ancestor based on the children. How?
-                # TODO: IMPLEMENT CORRECT HAPINESS PROPAGATION.
-                #ancestor.data["happiness"][player-1] = max(child.data["happiness"][player-1] for child in children)
+            if not children:
+                continue
+            mover = int(children[0].identifier.split(":")[0])-1
+            if mover not in [0,1,2,3]:
+                raise ValueError(f"Invalid mover {mover} for ancestor {ancestor.identifier}")
+            best_child = max(children,key=lambda child: child.data.happiness[mover])
+            ancestor.data.happiness = list(best_child.data.happiness)
         ancestors = get_ancestors(ancestors, move_tree) # move up the tree after finishing calculations of current level
     #pick the best path
     children = move_tree.children("root")
-    best_child = max(children, key=lambda child: child.data["happiness"][player-1])._identifier
+    #move_tree.show(line_type="ascii-emv",data_property="happiness")
+    #move_tree.show(line_type="ascii-emv")
+    best_child = max(children, key=lambda child: child.data.happiness[player-1])._identifier
     move = best_child[2:].replace(">","").replace("(","").replace(")","").replace(" ","").replace(",","").split("-")
     co: List[int] = [int(move[0][0]),int(move[0][1]),int(move[1][0]),int(move[1][1])]
-    print(co)
+    #print(co)
     old_ref: str = chr(ord("A") + co[1]) + str(co[0] + 1)
     new_ref: str = chr(ord("A") + co[3]) + str(co[2] + 1)
-    print(f"Player {player} selected move: {old_ref} -> {new_ref}")
+    #print(f"Player {player} selected move: {old_ref} -> {new_ref}")
     
     return old_ref, new_ref #assumes that the identifier of the best child is in the correct format
 
@@ -126,36 +143,52 @@ def AI_Player_Team27(board: List[List[int]], player: int, visualize: bool = Fals
 
 
 # recursivly generate a tree of possible moves for current and next players.
-def generate_tree(board: List[List[int]], player: int, board_map, depth: int,move_tree:tr.Tree,parent = "root") -> None:
+def generate_tree(board: List[List[int]], player: int, board_map, depth: int,move_tree:tr.Tree,parent = "root", org_depth:int = 0) -> None:
+    if org_depth == 0:
+        org_depth = depth
     if "root" not in move_tree: #first iteration (first call)
+        temp = bot_data()
+        temp.board = board
+        temp.player = player
+        temp.happiness = [0,0,0,0]
+        temp.board_string = board_to_string(board)
         move_tree.create_node(
-            "root", "root", data={"board" : board,"board_str": board_to_string(board)}
+            "root", "root", data=temp
         )
         board_map["root"] = board
     if depth == 0: #required depth reached, going up
         return None
 
     possible_moves = generate_possible_moves(board, player)
-
     for old_pos,new_pos in possible_moves: 
         board_copy = deepcopy(board)
         move(board_copy, old_pos, new_pos, player)
         move_id = f"{player}:{old_pos}->{new_pos}"
         if (move_id in move_tree) or (board_copy in board_map.values()):
-            if move_tree.depth(move_id) > depth:
+            if move_tree.get_node(move_id) is None:
+                continue
+            if move_tree.depth(move_id) > org_depth-depth:
                 #print(f"Move {move_id} already exists in tree and has been moved from depth {move_tree.depth(move_id)} to {depth}")
                 #print(board_to_string(board_copy))
                 move_tree.move_node(move_id, parent)
+                pass
             continue
 
-        data = {
-            "board": board_copy,
-            "board_str": board_to_string(board_copy), # str version of the board (for printing)
-            "happiness": [0,0,0,0] # how much each player likes this board (slot 0 - player 1, slot 1 - player 2, etc)
-        }
-        move_tree.create_node(move_id, move_id, parent,data)
+        temp = bot_data()
+        temp.board = board_copy
+        temp.player = player
+        temp.happiness = [0,0,0,0]
+        temp.board_string = board_to_string(board_copy)
+        move_tree.create_node(move_id, move_id, parent,temp)
         board_map[move_id] = board_copy
-        generate_tree(board_copy, player%4+1, board_map, depth-1, move_tree, move_id)
+        generate_tree(board_copy, player%4+1, board_map, depth-1, move_tree, move_id, org_depth)
+
+def get_player_start_cells(player: int) -> List[Tuple[int,int]]:
+    if player not in [1, 2, 3, 4]:
+        raise ValueError(f"Player {player} is not a valid player")
+    player = player + 2
+    if player > 4: player = player - 4
+    return win_cells_all[player]
 
 # generates all possible moves for given player and board.
 def generate_possible_moves(board: List[List[int]],player) -> List[Tuple[int,int]]:
@@ -164,13 +197,23 @@ def generate_possible_moves(board: List[List[int]],player) -> List[Tuple[int,int
         for column in range(5):
             if board[row][column] != player : continue
             old_pos = (row,column)
-
-            for newRow in range(-2,2):
-                for newColumn in range(-2,2):
+            if old_pos in win_cells_all[player]: continue # don't move pieces that are already in the end zone
+            for newRow in range(-4,4):
+                for newColumn in range(-4,4):
                     new_pos = (row+newRow,column+newColumn)
                     if new_pos[0] < 0 or new_pos[0] > 4 or new_pos[1] < 0 or new_pos[1] > 4: continue
                     if not check_legal_move(board,old_pos,new_pos): continue
+                    old_distance = min(
+                        abs(old_pos[0] - target[0]) + abs(old_pos[1] - target[1])
+                        for target in win_cells_all[player]
+                    )
+                    new_distance = min(
+                        abs(new_pos[0] - target[0]) + abs(new_pos[1] - target[1])
+                        for target in win_cells_all[player]
+                    )
+                    if new_distance-1 > old_distance: continue
                     possible_moves.append((old_pos,new_pos))
+    
     return possible_moves
 
 # serializes the board into an easy printable string.
@@ -204,9 +247,9 @@ Alternatively you can set a desired player's bot function to None and play them 
 '''
 BOT_FUNCTIONS: Dict[int, Optional[BotFunction]] = {
     1: AI_Player_Team27,
-    2: random_bot,
-    3: random_bot,
-    4: random_bot,
+    2: AI_Player_Team27,
+    3: AI_Player_Team27,
+    4: AI_Player_Team27,
 }
 
 
