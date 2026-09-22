@@ -61,7 +61,7 @@ def AI_Player_Team27(board: List[List[int]], player: int, visualize: bool, depth
     generate_tree(board, player, board_map, depth*4+1, move_tree)
     move_tree.show(line_type="ascii-emv")
     
-    # after tree is generated and printed, evauluate all paths.
+    # after tree is generated and printed, evaluate all paths.
     leaves = move_tree.leaves()
     for leaf in leaves:
         board = leaf.data["board"]
@@ -84,8 +84,14 @@ def AI_Player_Team27(board: List[List[int]], player: int, visualize: bool, depth
         for ancestor in ancestors:
             if ancestor.identifier == "root": continue
             children = move_tree.children(ancestor.identifier)
-            for player in range(1,5):
-                pass
+            if not children:
+                continue
+            mover = int(children[0].identifier.split(":")[0])
+            best_child = max(children,key=lambda child: child.data["happiness"][mover-1])
+            ancestor.data["happiness"] = list(best_child.data["happiness"])
+
+            #for player in range(1,5):
+               #pass
                 # calculate the happiness of the ancestor based on the children. How?
                 # TODO: IMPLEMENT CORRECT HAPINESS PROPAGATION.
                 #ancestor.data["happiness"][player-1] = max(child.data["happiness"][player-1] for child in children)
