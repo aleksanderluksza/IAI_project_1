@@ -87,6 +87,12 @@ def AI_Player_Team27(board: List[List[int]], player: int, visualize: bool, depth
     #       account for other players happiness.
     # 5. If None apply, AI should be as annoying to other players as possible.
 
+    # TODO per project instructions:
+    # 1. Implement pruning of repeated positions in the tree. (maybe done, check line 111)
+    # 2. Implement branch ordering using heuristics.
+    # 3. Implement Alpha-Beta pruning to avoid searching hopeless branches.
+    # 4. When the binary flag is set the code should visualize the search tree using treelib and output the result to Team<X>_Tree.png
+
 
 # recursivly generate a tree of possible moves for current and next players.
 def generate_tree(board: List[List[int]], player: int, board_map, depth: int,move_tree:tr.Tree,parent = "root") -> None:
