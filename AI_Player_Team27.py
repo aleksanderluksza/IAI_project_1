@@ -21,8 +21,9 @@ def AI_Player_Team27(board: List[List[int]], player: int, visualize: bool = Fals
     if depth < 1:
         raise ValueError("Depth must be at least 1")
 
+    tree = generate_tree_2(board, player, depth)
+
     if visualize:
-        tree = generate_tree_2(board, player, depth)
         tree.show()
         #tree.save2file("Team27_Tree.txt", line_type="ascii")
         tree.to_graphviz("Team27_Tree", graph="digraph")
@@ -32,37 +33,38 @@ def AI_Player_Team27(board: List[List[int]], player: int, visualize: bool = Fals
             print(f"Could not convert to PNG: {error}")
 
 
+    minimax_search_tree(tree, player, "root")
+
     best_move = None
     best_score = -float("inf")
 
-    for old_pos, new_pos in generate_possible_moves(board, player):
-        board_copy = deepcopy(board)
-        move(board_copy, old_pos, new_pos, player)
-
-        score = alpha_beta_pruning(
-            board_copy,
-            (player % 4) + 1,
-            depth - 1,
-            -float("inf"),
-            float("inf"),
-            player,
-        )
-
+    for child in tree.children("root"):
+        # print(f"Child: {child.identifier}, Score: {child.data.get('score', 'N/A')}")
+        score = child.data.get("score", -float("inf"))
         if score > best_score:
             best_score = score
-            best_move = (old_pos, new_pos)
+            best_move = child.data.get("move")
 
     if best_move is None:
         return "", ""
 
+    move_str = move_to_string(best_move)
+    print(f"Best move for player {player}: {move_str} with score {best_score}")
+
     old_pos, new_pos = best_move
-    old_ref: str = chr(ord("A") + old_pos[1]) + str(old_pos[0] + 1)
-    new_ref: str = chr(ord("A") + new_pos[1]) + str(new_pos[0] + 1)
+    old_ref: str = position_to_string(old_pos)
+    new_ref: str = position_to_string(new_pos)
     print(f"Player {player} selected move: {old_ref} -> {new_ref}")
     return old_ref, new_ref
 
-   
 
+def position_to_string(position: Tuple[int, int]) -> str:
+    return chr(ord("A") + position[1]) + str(position[0] + 1)
+
+
+def move_to_string(move: Tuple[Tuple[int, int], Tuple[int, int]]) -> str:
+    old_pos, new_pos = move
+    return f"{position_to_string(old_pos)}->{position_to_string(new_pos)}"
 
 # Scores how good a board is for that player
 # by seeing how far removed they are from their
@@ -137,6 +139,39 @@ def alpha_beta_pruning(
             break
     return best
 
+def minimax_search_tree(tree: tr.Tree, root_player: int, node_id: str = "root") -> float:
+    node = tree.get_node(node_id)
+    children = tree.children(node_id)
+
+    if not children:
+        score = alpha_beta_pruning(
+            node.data["board"],
+            node.data.get("player_to_move", root_player),
+            0,
+            -float("inf"),
+            float("inf"),
+            root_player,
+        )
+        node.data["score"] = score
+        return score
+
+    child_scores = []
+
+    for child in children:
+        score = minimax_search_tree(tree, root_player, child.identifier)
+        child_scores.append(score)
+
+
+    if node.data.get("player_to_move") == root_player:
+        # maximising player
+        score = max(child_scores)
+    else:
+        score = min(child_scores)
+
+    node.data["score"] = score
+    return score
+
+
 def generate_tree_2(
         board: List[List[int]],
         player: int,
@@ -147,7 +182,18 @@ def generate_tree_2(
 ) -> tr.Tree:
     if tree is None:
         tree = tr.Tree()
-        tree.create_node(parent, parent, data={"board": board, "board_str": board_to_string(board)})
+        tree.create_node(
+            parent,
+            parent,
+            data={
+                "board": board,
+                "board_str": board_to_string(board),
+                "player_to_move": player,
+                "score": 0,
+                "move": None,
+                "move_str": None,  # for debugging
+            },
+        )
 
     if depth == 0:
         return tree
@@ -157,8 +203,7 @@ def generate_tree_2(
     if key in seen:
         return tree
     seen.add(key)
-    
-    # tree.create_node(parent, parent, data={"board": board, "board_str": board_to_string(board)})
+
     possible_moves = generate_possible_moves(board, player)
     for old_pos, new_pos in possible_moves:
         board_copy = deepcopy(board)
@@ -166,7 +211,20 @@ def generate_tree_2(
         move_id = f"{player}:{chr(ord("A") + old_pos[1]) + str(old_pos[0] + 1)}->{chr(ord("A") + new_pos[1]) + str(new_pos[0] + 1)}"
         if move_id in tree:
             continue
-        tree.create_node(move_id, move_id, parent=parent, data={"board": board_copy, "board_str": board_to_string(board_copy)})
+
+        tree.create_node(
+            move_id,
+            move_id,
+            parent=parent,
+            data={
+                "board": board_copy,
+                "board_str": board_to_string(board_copy),
+                "player_to_move": (player % 4) + 1,
+                "score": 0,
+                "move": (old_pos, new_pos),
+                "move_str": f"{position_to_string(old_pos)}->{position_to_string(new_pos)}", # for debugging
+            },
+        )
         generate_tree_2(board_copy, (player % 4) + 1, depth - 1, move_id, tree, seen)
 
     return tree
