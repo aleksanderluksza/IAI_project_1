@@ -89,7 +89,7 @@ def AI_Player_Team27(board: List[List[int]], player: int, visualize: bool, depth
             mover = int(children[0].identifier.split(":")[0])
             best_child = max(children,key=lambda child: child.data["happiness"][mover-1])
             ancestor.data["happiness"] = list(best_child.data["happiness"])
-
+#check
             #for player in range(1,5):
                #pass
                 # calculate the happiness of the ancestor based on the children. How?
