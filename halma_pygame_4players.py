@@ -67,6 +67,8 @@ def AI_Player_Team27(board: List[List[int]], player: int, visualize: bool, depth
         board = leaf.data["board"]
         happiness = leaf.data["happiness"]
         for player in range(1,5):
+            points_a = 0
+            points_b = 0
             for row in range(5):
                 for column in range(5):
                     if board[row][column] != player: continue
@@ -77,8 +79,31 @@ def AI_Player_Team27(board: List[List[int]], player: int, visualize: bool, depth
                     if points_a == 75: points_a += 25 # 25 points for being a winning board
                     happiness[player-1] = points_a + points_b
     # all leaves have been evaluated for each player, now we propagate it up the tree 
+    ancestors = get_ancestors(leaves, move_tree)
+    while ancestors != []:
+        for ancestor in ancestors:
+            if ancestor.identifier == "root": continue
+            children = move_tree.children(ancestor.identifier)
+            for player in range(1,5):
+                pass
+                # calculate the happiness of the ancestor based on the children. How?
+                # TODO: IMPLEMENT CORRECT HAPINESS PROPAGATION.
+                #ancestor.data["happiness"][player-1] = max(child.data["happiness"][player-1] for child in children)
+        ancestors = get_ancestors(ancestors, move_tree) # move up the tree after finishing calculations of current level
+    #pick the best path
+    children = move_tree.children("root")
+    best_child = max(children, key=lambda child: child.data["happiness"][player-1])._identifier
+    move = best_child[2:].replace(">","").replace("(","").replace(")","").replace(" ","").replace(",","").split("-")
+    co: List[int] = [int(move[0][0]),int(move[0][1]),int(move[1][0]),int(move[1][1])]
+    print(co)
+    old_ref: str = chr(ord("A") + co[1]) + str(co[0] + 1)
+    new_ref: str = chr(ord("A") + co[3]) + str(co[2] + 1)
+    print(f"Player {player} selected move: {old_ref} -> {new_ref}")
+    
+    return old_ref, new_ref #assumes that the identifier of the best child is in the correct format
 
     ## TODO: propagate happiness values up the tree to the root.
+    
 
     # 1. AI should select moves that maximize its changes of winning.
     # 2. AI should account for other players happiness (no player will choose a move that gives them no chances of winning)
@@ -112,8 +137,8 @@ def generate_tree(board: List[List[int]], player: int, board_map, depth: int,mov
         move_id = f"{player}:{old_pos}->{new_pos}"
         if (move_id in move_tree) or (board_copy in board_map.values()):
             if move_tree.depth(move_id) > depth:
-                print(f"Move {move_id} already exists in tree and has been moved from depth {move_tree.depth(move_id)} to {depth}")
-                print(board_to_string(board_copy))
+                #print(f"Move {move_id} already exists in tree and has been moved from depth {move_tree.depth(move_id)} to {depth}")
+                #print(board_to_string(board_copy))
                 move_tree.move_node(move_id, parent)
             continue
 
@@ -125,15 +150,6 @@ def generate_tree(board: List[List[int]], player: int, board_map, depth: int,mov
         move_tree.create_node(move_id, move_id, parent,data)
         board_map[move_id] = board_copy
         generate_tree(board_copy, player%4+1, board_map, depth-1, move_tree, move_id)
-
-# serializes the board into an easy printable string.
-def board_to_string(board: List[List[int]]) -> str:
-    returnable:str = ""
-    for row in board:
-        for cell in row:
-            returnable += str(cell).replace("0",".")
-        returnable += "\n"
-    return returnable
 
 # generates all possible moves for given player and board.
 def generate_possible_moves(board: List[List[int]],player) -> List[Tuple[int,int]]:
@@ -150,6 +166,28 @@ def generate_possible_moves(board: List[List[int]],player) -> List[Tuple[int,int
                     if not check_legal_move(board,old_pos,new_pos): continue
                     possible_moves.append((old_pos,new_pos))
     return possible_moves
+
+# serializes the board into an easy printable string.
+def board_to_string(board: List[List[int]]) -> str:
+    returnable:str = ""
+    for row in board:
+        for cell in row:
+            returnable += str(cell).replace("0",".")
+        returnable += "\n"
+    return returnable
+
+def get_ancestors(node_list: List[tr.Node], tree: tr.Tree) -> List[tr.Node]:
+    ancestors = []
+    try:
+        for node in node_list:
+            id = tree.ancestor(node.identifier)
+            if id is None: continue
+            node = tree.get_node(id)
+            if node is None: continue
+            ancestors.append(node)
+        return list(set(ancestors))
+    except:
+        return []
 
 '''
 Import your team's function above, then replace random_bot for that player.
