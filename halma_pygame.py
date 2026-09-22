@@ -42,7 +42,7 @@ BotFunction = Callable[
 ]
 
 # function used to catch errors from tree_bot, so you can actually see the stack trace
-# Because surprise, turns out knowning where error was is quite helpful for fixing it
+# Because suprise, turns out knowning where error was is quite helpful for fixing it
 def tree_bot1(board: List[List[int]], player: int, visualize_tree: bool) -> Tuple[str, str]:
     try:
         return tree_bot(board, player, visualize_tree)
@@ -57,7 +57,7 @@ def tree_bot1(board: List[List[int]], player: int, visualize_tree: bool) -> Tupl
 
 # main function, gets the current state of the board, its player number and returns position of move (ex. "A1", "B2") for A1 to B2
 # this whole function is a nigthmare, don't touch it ill fix it.
-def tree_bot(board: List[List[int]], player: int, visualize_tree: bool) -> Tuple[str, str]:
+def tree_bot(board: List[List[int]], player: int, visualize_tree: bool) -> Touple[str, str]:
     boardTree = tr.Tree()
     moveList = []
     boardTree.create_node("Original board",-1,data=board)
