@@ -1,0 +1,22 @@
+digraph tree {
+	"root" [label="root", shape=circle]
+	"2:A3->A4" [label="2:A3->A4", shape=circle]
+	"2:A3->B3" [label="2:A3->B3", shape=circle]
+	"2:A5->A4" [label="2:A5->A4", shape=circle]
+	"2:B5->B4" [label="2:B5->B4", shape=circle]
+	"2:B5->C5" [label="2:B5->C5", shape=circle]
+	"3:B2->B3" [label="3:B2->B3", shape=circle]
+	"3:B2->C2" [label="3:B2->C2", shape=circle]
+	"3:D1->D2" [label="3:D1->D2", shape=circle]
+	"3:D1->E1" [label="3:D1->E1", shape=circle]
+
+	"root" -> "2:A3->B3"
+	"root" -> "2:A3->A4"
+	"root" -> "2:A5->A4"
+	"root" -> "2:B5->B4"
+	"root" -> "2:B5->C5"
+	"2:A3->A4" -> "3:B2->B3"
+	"2:A3->B3" -> "3:D1->E1"
+	"2:A3->B3" -> "3:D1->D2"
+	"2:A3->B3" -> "3:B2->C2"
+}

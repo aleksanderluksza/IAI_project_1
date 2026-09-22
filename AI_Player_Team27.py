@@ -3,6 +3,7 @@ import pygame
 import treelib as tr
 from copy import deepcopy
 import traceback
+from graphviz import Source
 
 from halma import (
     check_legal_move,
@@ -23,7 +24,13 @@ def AI_Player_Team27(board: List[List[int]], player: int, visualize: bool = Fals
     if visualize:
         tree = generate_tree_2(board, player, depth)
         tree.show()
-        tree.save2file("Team27_Tree.txt", line_type="ascii")
+        #tree.save2file("Team27_Tree.txt", line_type="ascii")
+        tree.to_graphviz("Team27_Tree", graph="digraph")
+        try:
+            Source.from_file("Team27_Tree").render(format="png")
+        except Exception as error:
+            print(f"Could not convert to PNG: {error}")
+
 
     best_move = None
     best_score = -float("inf")
@@ -156,7 +163,7 @@ def generate_tree_2(
     for old_pos, new_pos in possible_moves:
         board_copy = deepcopy(board)
         move(board_copy, old_pos, new_pos, player)
-        move_id = f"{player}:{old_pos}->{new_pos}"
+        move_id = f"{player}:{chr(ord("A") + old_pos[1]) + str(old_pos[0] + 1)}->{chr(ord("A") + new_pos[1]) + str(new_pos[0] + 1)}"
         if move_id in tree:
             continue
         tree.create_node(move_id, move_id, parent=parent, data={"board": board_copy, "board_str": board_to_string(board_copy)})
