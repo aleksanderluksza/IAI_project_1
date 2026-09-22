@@ -55,7 +55,13 @@ BotFunction = Callable[
     Tuple[str, str]
 ]
 
-def AI_Player_Team27(board: List[List[int]], player: int, visualize: bool, depth:int = 2) -> Tuple[str, str]:
+def AI_Player_Team27(board: List[List[int]], player: int, visualize: bool = False, depth:int = 2) -> Tuple[str, str]:
+    if len(board) != 5 or len(board[0]) != 5:
+        raise ValueError("Board must be 5 by 5")
+    if player not in [1, 2, 3, 4]:
+        raise ValueError(f"Player {player} is not a valid player")
+    if depth < 1:
+        raise ValueError("Depth must be at least 1")
     board_map = {}
     move_tree = tr.Tree()
     generate_tree(board, player, board_map, depth*4+1, move_tree)
