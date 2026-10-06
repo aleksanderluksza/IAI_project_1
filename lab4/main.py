@@ -115,7 +115,6 @@ def main():
     print(f"\nBest params: {best_params}")
     print(f"Cross validation Balance Accuracy = {best_score*100:.2f} %")
 
-    return 0 #since we are debugging, exit immediatly afterwards.
     # Final forest on all training data (more trees for stability)
     final_params = dict(best_params, n_trees=300)
     final = MyForest(seed=SEED, **final_params).fit(column_values, y)
