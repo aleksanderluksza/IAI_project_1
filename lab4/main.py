@@ -7,8 +7,8 @@ from sklearn.metrics import balanced_accuracy_score
 
 SEED = 42
 K_FOLDS = 5
-TRAIN_PATH = "dry_bean_train.csv"
-TEST_PATH = "dry_bean_test.csv"
+TRAIN_DATA_PATH = "dry_bean_train.csv"
+TEST_DATA_PATH = "dry_bean_test.csv"
 LABEL_COL = "Class"
 
 
@@ -78,14 +78,14 @@ def cross_validate(params, X, y, folds):
 
 
 def main():
-    train = pd.read_csv(TRAIN_PATH)
-    test = pd.read_csv(TEST_PATH)
-    feature_cols = [c for c in train.columns if c != LABEL_COL]
+    trainData = pd.read_csv(TRAIN_DATA_PATH)
+    testData = pd.read_csv(TEST_DATA_PATH)
+    column_names = [c for c in trainData.columns if c != LABEL_COL]
 
-    X = train[feature_cols].values
-    classes = np.array(sorted(train[LABEL_COL].unique()))
-    y = np.searchsorted(classes, train[LABEL_COL].values)
-    X_test = test[feature_cols].values
+    column_values = trainData[column_names].values
+    bean_types = np.array(sorted(trainData[LABEL_COL].unique()))
+    y = np.searchsorted(bean_types, trainData[LABEL_COL].values)
+    X_test = testData[column_names].values
 
     folds = stratified_kfold_indices(y, K_FOLDS, SEED)
 
@@ -93,8 +93,8 @@ def main():
     base = []
     for i, val_idx in enumerate(folds):
         tr = np.concatenate([f for j, f in enumerate(folds) if j != i])
-        t = DecisionTreeClassifier(random_state=SEED).fit(X[tr], y[tr])
-        base.append(balanced_accuracy_score(y[val_idx], t.predict(X[val_idx])))
+        t = DecisionTreeClassifier(random_state=SEED).fit(column_values[tr], y[tr])
+        base.append(balanced_accuracy_score(y[val_idx], t.predict(column_values[val_idx])))
     print(f"Single tree  CV balanced accuracy: {np.mean(base)*100:.2f}%")
 
     # Grid search with CV
@@ -107,7 +107,7 @@ def main():
     best_score, best_params = -1, None
     for values in itertools.product(*grid.values()):
         params = dict(zip(grid.keys(), values))
-        mean, std = cross_validate(params, X, y, folds)
+        mean, std = cross_validate(params, column_values, y, folds)
         print(f"{params}  ->  {mean*100:.2f}% (+/- {std*100:.2f})")
         if mean > best_score:
             best_score, best_params = mean, params
@@ -115,11 +115,12 @@ def main():
     print(f"\nBest params: {best_params}")
     print(f"Cross validation Balance Accuracy = {best_score*100:.2f} %")
 
+    return 0 #since we are debugging, exit immediatly afterwards.
     # Final forest on all training data (more trees for stability)
     final_params = dict(best_params, n_trees=300)
-    final = MyForest(seed=SEED, **final_params).fit(X, y)
-    out = test.copy()
-    out["Target"] = classes[final.predict(X_test)]
+    final = MyForest(seed=SEED, **final_params).fit(column_values, y)
+    out = testData.copy()
+    out["Target"] = bean_types[final.predict(X_test)]
     out.to_csv("forest.csv", index=False)
     print("Saved forest.csv", out.shape)
 
