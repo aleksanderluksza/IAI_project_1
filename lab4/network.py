@@ -1,6 +1,7 @@
-# Cross validation Balance Accuracy = 94.26 %
-#To run this code, numpy, pandas, scikit-learn, torch and tensorboard have to be installed.
-#After installation, run python network.py   (watch the losses with: tensorboard --logdir runs)
+# Cross validation Balance Accuracy = 94.21 %
+#To run this code, numpy v.2.5.3, pandas v.3.0.6, scikit-learn v.1.9.1, torch v.2.14.1(+cu132 for cuda support) and tensorboard v.0.29.1(+cu132) have to be installed.
+#After installation, run python network.py
+#After running network.py, to check logged losses visualizations, enter 'tensorboard --logdir runs' to terminal and enter the linked page hosted on localhost
 import itertools
 import numpy as np
 import pandas as pd
@@ -10,7 +11,7 @@ from torch.utils.data import Dataset, DataLoader
 from torch.utils.tensorboard import SummaryWriter
 from sklearn.metrics import balanced_accuracy_score
 
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu") #device checkup - to run this code on gpu, torch version with cuda support is needed (requires a gpu with cuda cores)
 
 def stratified_folding(values, k, seed): #folding for cross validation, stratified for reliable cross validation, as amounts of different class names are not equal
     rng = np.random.RandomState(seed)
@@ -48,18 +49,18 @@ class Network(nn.Module): #input layer -> hidden layer(s) (Linear + BatchNorm + 
         self.layers = nn.Sequential(*layers)
 
     def forward(self, x):
-        return self.layers(x) #raw scores (logits), the softmax is part of our own loss
+        return self.layers(x)
 
-def cross_entropy(logits, targets): #own loss: -log(softmax) of the true class, summed over the batch (normalised later by the number of samples)
+def cross_entropy(logits, targets): #checking how wrong the network is at giving labels to beans
     log_probs = logits - torch.logsumexp(logits, dim=1, keepdim=True)
     return -log_probs[torch.arange(len(targets)), targets].sum()
 
-def standardise(train_values, other_values): #scaling is learned only from training samples, so validation samples stay unseen
+def standardise(train_values, other_values): #standardisation of values for better neural network training
     mean = train_values.mean(axis=0)
     std = train_values.std(axis=0) + 1e-8
     return (train_values - mean) / std, (other_values - mean) / std
 
-def predict(model, column_values, batch_size=512): #evaluation loop, no gradients, dropout and batch norm in eval mode
+def predict(model, column_values, batch_size=512): 
     model.eval()
     predictions = []
     with torch.no_grad():
@@ -67,21 +68,22 @@ def predict(model, column_values, batch_size=512): #evaluation loop, no gradient
             predictions.append(model(x.to(device)).argmax(dim=1).cpu().numpy())
     return np.concatenate(predictions)
 
-def network_training(column_values, label_column_values, n_classes, params, seed, validation=None, writer=None, tag="train"):
+def network_training(column_values, label_column_values, n_classes, params, seed, validation=None, writer=None, tag="train"): #training of the network, done by passing through training data(epoch), split into mini batches
     torch.manual_seed(seed)
     model = Network(column_values.shape[1], n_classes, params["hidden_sizes"], params["activation"], params["dropout"]).to(device)
     optimizer = torch.optim.Adam(model.parameters(), lr=params["lr"], weight_decay=params["weight_decay"])
     loader = DataLoader(BeanDataset(column_values, label_column_values), batch_size=params["batch_size"],
                         shuffle=True, generator=torch.Generator().manual_seed(seed))
     for epoch in range(params["epochs"]):
-        model.train()
-        total_loss = 0.0 #loss accumulated over the mini-batches
+        model.train() #switches the model to training behaviour
+        total_loss = 0.0 
         for x, y in loader:
-            x, y = x.to(device), y.to(device)
-            optimizer.zero_grad()
-            loss = cross_entropy(model(x), y) / len(y) #normalised by the batch size
-            loss.backward()
-            optimizer.step()
+            x = x.to(device)
+            y = y.to(device) 
+            optimizer.zero_grad() #resets gradients
+            loss = cross_entropy(model(x), y) / len(y) #calculating the difference between real results and network's results within the batch
+            loss.backward() 
+            optimizer.step() #updates optimizer
             total_loss += loss.item() * len(y)
         if writer is not None:
             writer.add_scalar(f"{tag}/loss", total_loss / len(loader.dataset), epoch)
@@ -119,14 +121,14 @@ def main():
     n_classes = bean_types.size
 
     folds = stratified_folding(bean_types_values, 5, seed)
-    writer = SummaryWriter("runs/network")
+    writer = SummaryWriter("runs")
 
     base_params = {"hidden_sizes": (64,), "activation": "relu", "dropout": 0.0,
                    "weight_decay": 0.0, "lr": 0.003, "batch_size": 128, "epochs": 40}
 
-    #basic case - one hidden layer, no regularization
+    #basic case
     mean, std = cross_validate(seed, base_params, trainData_column_values, bean_types_values, folds, n_classes, writer, "baseline")
-    print(f"Baseline (no regularization)  CV balanced accuracy: {mean*100:.2f}% (+/- {std*100:.2f})")
+    print(f"Baseline CV balanced accuracy: {mean*100:.2f}% (+/- {std*100:.2f})")
 
     #grid values that may be change in regard to how powerful the device is
     grid = {
